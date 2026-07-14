@@ -246,9 +246,11 @@ part of the variable should not be conditioned on.
 
 However, note that in this case each element of the multivariate random variable must be on
 its own tilde-statement. In other words, if we write `m ~ MvNormal(...)`, then we cannot
-condition on only `m[1]`. (In principle, for some distributions this can be possible,
-specifically when the distribution can be factorised into independent components, like an
-MvNormal with a diagonal covariance matrix. However, this is not currently implemented.)
+condition on only `m[1]`. Attempting to do so may abort model evaluation with an unrelated
+`DimensionMismatch`, or the conditioning may be silently ignored, with `m` sampled afresh.
+(In principle, for some distributions this can be possible, specifically when the
+distribution can be factorised into independent components, like an MvNormal with a
+diagonal covariance matrix. However, this is not currently implemented.)
 
 ```jldoctest condition
 julia> @model function demo_mv(::Type{TV}=Float64) where {TV}
@@ -521,6 +523,15 @@ conditioned(model::Model) = conditioned(model.context)
 Return a `Model` which now treats the variables in `values` as fixed.
 
 See also: [`unfix`](@ref), [`fixed`](@ref)
+
+!!! warning "Fixing applies to whole variables"
+    Variables are treated as they occur in the model. A variable drawn from a multivariate
+    distribution in a single tilde-statement (e.g. `x ~ MvNormal(...)`) is a *single* random
+    variable, so a subset of its components cannot be fixed independently; only fixing the
+    variable in its entirety is supported. Attempting to fix a subset may silently collapse
+    the variable to just the supplied components, or leave it entirely unfixed and sampled
+    from the prior. Declare components in a loop (`x[i] ~ ...`) if you need to fix them
+    individually.
 
 # Examples
 ## Simple univariate model
